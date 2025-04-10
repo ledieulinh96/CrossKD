@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/coco_detection.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
 ]
-teacher_ckpt = 'https://download.openmmlab.com/mmdetection/v2.0/gfl/gfl_r101_fpn_mstrain_2x_coco/gfl_r101_fpn_mstrain_2x_coco_20200629_200126-dd12f847.pth'  # noqa
+teacher_ckpt = 'https://download.openmmlab.com/mmdetection/v2.0/gfl/gfl_r50_fpn_1x_coco/gfl_r50_fpn_1x_coco_20200629_121244-25944287.pth'  # noqa
 model = dict(
     type='KnowledgeDistillationSingleStageDetector',
     data_preprocessor=dict(
@@ -11,7 +11,7 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         bgr_to_rgb=True,
         pad_size_divisor=32),
-    teacher_config='configs/gfl/gfl_r101_fpn_ms-2x_coco.py',
+    teacher_config='configs/gfl/gfl_r50_fpn_1x_coco.py',
     teacher_ckpt=teacher_ckpt,
     backbone=dict(
         type='ResNet',
@@ -48,10 +48,13 @@ model = dict(
             beta=2.0,
             loss_weight=1.0),
         loss_dfl=dict(type='DistributionFocalLoss', loss_weight=0.25),
+        # loss_ld=dict(
+        #     type='KnowledgeDistillationKLDivLoss', loss_weight=0.25, T=10),
         loss_ld=dict(
             type='KnowledgeDistillationKLDivLoss', loss_weight=0.25, T=10),
         reg_max=16,
         loss_bbox=dict(type='GIoULoss', loss_weight=2.0)),
+        
     # training and testing settings
     train_cfg=dict(
         assigner=dict(type='ATSSAssigner', topk=9),
@@ -68,3 +71,7 @@ model = dict(
 optim_wrapper = dict(
     type='OptimWrapper',
     optimizer=dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001))
+train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=12, val_interval=1)
+default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=1))
+train_dataloader = dict(batch_size=2, num_workers=4)
+auto_scale_lr = dict(enable=True, base_batch_size=16)

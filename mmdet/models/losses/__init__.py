@@ -11,7 +11,7 @@ from .gfocal_loss import DistributionFocalLoss, QualityFocalLoss
 from .ghm_loss import GHMC, GHMR
 from .iou_loss import (BoundedIoULoss, CIoULoss, DIoULoss, EIoULoss, GIoULoss,
                        IoULoss, bounded_iou_loss, iou_loss)
-from .kd_loss import KnowledgeDistillationKLDivLoss, KDQualityFocalLoss
+from .kd_loss import KnowledgeDistillationKLDivLoss, KDQualityFocalLoss, KnowledgeDistillationJSDivLoss, KnowledgeDistillationGeometricJSLoss
 from .mse_loss import MSELoss, mse_loss
 from .pisa_loss import carl_loss, isr_p
 from .seesaw_loss import SeesawLoss
@@ -29,6 +29,6 @@ __all__ = [
     'EIoULoss', 'GHMC', 'GHMR', 'reduce_loss', 'weight_reduce_loss',
     'weighted_loss', 'L1Loss', 'l1_loss', 'isr_p', 'carl_loss',
     'AssociativeEmbeddingLoss', 'GaussianFocalLoss', 'QualityFocalLoss',
-    'DistributionFocalLoss', 'VarifocalLoss', 'KnowledgeDistillationKLDivLoss',
+    'DistributionFocalLoss', 'VarifocalLoss', 'KnowledgeDistillationKLDivLoss','KnowledgeDistillationJSDivLoss','KnowledgeDistillationGeometricJSLoss',
     'SeesawLoss', 'DiceLoss', 'KDQualityFocalLoss', 'PKDLoss'
 ]

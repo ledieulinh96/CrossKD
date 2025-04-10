@@ -1,0 +1,49 @@
+{
+  "os": "Linux-5.15.0-125-generic-x86_64-with-glibc2.17",
+  "python": "3.8.20",
+  "startedAt": "2024-11-20T00:53:49.045803Z",
+  "program": "/home/icns/linh/CrossKD/push_wandb.py",
+  "codePath": "push_wandb.py",
+  "git": {
+    "remote": "https://github.com/ledieulinh96/CrossKD.git",
+    "commit": "87e156a46259e3a516b65fc6a049b200b9ab0d54"
+  },
+  "email": "d.linh1196@khu.ac.kr",
+  "root": "/home/icns/linh/CrossKD",
+  "host": "icns",
+  "username": "icns",
+  "executable": "/home/icns/anaconda3/envs/openmmlab/bin/python",
+  "codePathLocal": "push_wandb.py",
+  "cpu_count": 28,
+  "cpu_count_logical": 56,
+  "gpu": "NVIDIA GeForce RTX 2080 Ti",
+  "gpu_count": 2,
+  "disk": {
+    "/": {
+      "total": "1966736678912",
+      "used": "1427048062976"
+    }
+  },
+  "memory": {
+    "total": "117886894080"
+  },
+  "cpu": {
+    "count": 28,
+    "countLogical": 56
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 4352,
+      "architecture": "Turing"
+    },
+    {
+      "name": "NVIDIA GeForce RTX 2080 Ti",
+      "memoryTotal": "11811160064",
+      "cudaCores": 4352,
+      "architecture": "Turing"
+    }
+  ],
+  "cudaVersion": "12.2"
+}

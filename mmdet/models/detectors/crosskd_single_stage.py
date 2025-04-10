@@ -77,6 +77,7 @@ class CrossKDSingleStageDetector(SingleStageDetector):
         if kd_cfg.get('loss_feat_kd', None):
             self.loss_feat_kd = MODELS.build(kd_cfg['loss_feat_kd'])
             self.with_feat_distill = True
+        
         self.reused_teacher_head_idx = kd_cfg['reused_teacher_head_idx']
 
     @staticmethod

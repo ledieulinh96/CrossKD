@@ -108,7 +108,7 @@ class CrossKDGFL(CrossKDSingleStageDetector):
             bbox_preds: List[Tensor],
             feats: List[Tensor],
             reused_cls_scores: List[Tensor],
-            reused_bbox_preds: List[Tensor],
+            reused_bbox_preds: List[Tensor], ######
             batch_gt_instances: InstanceList,
             batch_img_metas: List[dict],
             batch_gt_instances_ignore: OptInstanceList = None) -> dict:
@@ -142,7 +142,7 @@ class CrossKDGFL(CrossKDSingleStageDetector):
         anchor_list, valid_flag_list = self.bbox_head.get_anchors(
             featmap_sizes, batch_img_metas, device=device)
 
-        cls_reg_targets = self.bbox_head.get_targets(
+        cls_reg_targets = self.bbox_head.get_targets( ######  GT
             anchor_list,
             valid_flag_list,
             batch_gt_instances,
@@ -153,14 +153,14 @@ class CrossKDGFL(CrossKDSingleStageDetector):
          bbox_weights_list, avg_factor) = cls_reg_targets
 
         avg_factor = reduce_mean(
-            torch.tensor(avg_factor, dtype=torch.float, device=device)).item()
+            torch.tensor(avg_factor, dtype=torch.float, device=device)).item()  #normalize it across batch and feature map sizes.
 
         losses_cls, losses_bbox, losses_dfl,\
             new_avg_factor = multi_apply(
-                self.bbox_head.loss_by_feat_single,
+                self.bbox_head.loss_by_feat_single, #computes the primary bounding box loss for the student model
                 anchor_list,
                 cls_scores,
-                bbox_preds,
+                bbox_preds,  
                 labels_list,
                 label_weights_list,
                 bbox_targets_list,
@@ -174,12 +174,13 @@ class CrossKDGFL(CrossKDSingleStageDetector):
         losses = dict(
             loss_cls=losses_cls, loss_bbox=losses_bbox, loss_dfl=losses_dfl)
 
-        losses_cls_kd, losses_reg_kd, kd_avg_factor = multi_apply(
-            self.pred_mimicking_loss_single,
+        losses_cls_kd, losses_reg_kd, kd_avg_factor = multi_apply( ################loss_reg_kd
+            self.pred_mimicking_loss_single, #calculates a distillation loss for bounding box predictions
             tea_cls_scores,
             tea_bbox_preds,
             reused_cls_scores,
             reused_bbox_preds,
+            bbox_preds,
             label_weights_list,
             avg_factor=avg_factor)
         kd_avg_factor = sum(kd_avg_factor)
@@ -196,7 +197,7 @@ class CrossKDGFL(CrossKDSingleStageDetector):
         return losses
 
     def pred_mimicking_loss_single(self, tea_cls_score, tea_bbox_pred,
-                                   reused_cls_score, reused_bbox_pred,
+                                   reused_cls_score, reused_bbox_pred, bbox_stu,
                                    label_weights, avg_factor):
         # classification branch distillation
         tea_cls_score = tea_cls_score.permute(0, 2, 3, 1).reshape(
@@ -211,17 +212,29 @@ class CrossKDGFL(CrossKDSingleStageDetector):
             avg_factor=avg_factor)
 
         # regression branch distillation
-        reg_max = self.bbox_head.reg_max
-        tea_bbox_pred = tea_bbox_pred.permute(0, 2, 3,
-                                              1).reshape(-1, reg_max + 1)
+        reg_max = self.bbox_head.reg_max # typically defining the range of possible box offsets in the prediction.
+        #int: range of 4–7
+        tea_bbox_pred = tea_bbox_pred.permute(0, 2, 3, # bounding box predictions
+                                              1).reshape(-1, reg_max + 1) # flattens the spatial dimensions (H and W) into a single dimension, making each prediction an entry in a matrix of shape
+        #2D matrices where each row represents one bounding box prediction as a vector of size reg_max + 1
+        #tensor: (N, 4 * (reg_max + 1), H, W) -> (N * H * W * 4, reg_max + 1) [134400,17]
         reused_bbox_pred = reused_bbox_pred.permute(0, 2, 3, 1).reshape(
             -1, reg_max + 1)
-        reg_weights = tea_cls_score.max(dim=1)[0].sigmoid()
-        reg_weights[label_weights == 0] = 0
+        
+
+        reg_weights = tea_cls_score.max(dim=1)[0].sigmoid() #selects the maximum class score for each spatial location, reducing it to a single confidence value.
+        #(N, num_classes, H, W) -> (N, H, W)
+        #finds the maximum classification score across all classes for each bounding box. This is a measure of the teacher’s confidence in each bounding box.
+        #
+        reg_weights[label_weights == 0] = 0 #Sets reg_weights to zero at locations where label_weights equals zero, which are ignored areas (background).
+        #sets the weight to zero for bounding boxes where the label weight is zero (i.e., background or ignored boxes). 33600
         loss_reg_kd = self.loss_reg_kd(
-            reused_bbox_pred,
+            reused_bbox_pred, #The student model’s bounding box predictions. (N * H * W * 4, reg_max + 1)
             tea_bbox_pred,
-            weight=reg_weights[:, None].expand(-1, 4).reshape(-1),
-            avg_factor=4.0)
+            weight=reg_weights[:, None].expand(-1, 4).reshape(-1), #The weights to be applied to each bounding box.
+            #Adds an extra dimension ([:, None]), turning reg_weights into shape (N, H, W, 1).
+#Expands it to (N, H, W, 4), creating four copies per bounding box coordinate.
+#Reshapes it to a flat vector of shape (N * H * W * 4,), aligning it with reused_bbox_pred and tea_bbox_pred so that each bounding box prediction gets a weight.
+            avg_factor=4.0) #Scales the loss by this factor, which could be used for normalization purposes.
 
         return loss_cls_kd, loss_reg_kd, reg_weights.sum()

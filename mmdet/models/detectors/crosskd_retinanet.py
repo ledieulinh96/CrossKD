@@ -36,16 +36,22 @@ class CrossKDRetinaNet(CrossKDSingleStageDetector):
         stu_x = self.extract_feat(batch_inputs)
         stu_cls_scores, stu_bbox_preds, stu_cls_hold, stu_reg_hold = \
             multi_apply(self.forward_crosskd_single, stu_x, module=self)
-        reused_cls_scores, reused_bbox_preds = multi_apply(
-            self.reuse_teacher_head, tea_cls_hold, tea_reg_hold, stu_cls_hold,
-            stu_reg_hold)
+        # reused_cls_scores, reused_bbox_preds = multi_apply(
+        #     self.reuse_teacher_head, tea_cls_hold, tea_reg_hold, stu_cls_hold,
+        #     stu_reg_hold)
+
+        injected_cls_scores, injected_bbox_preds = multi_apply(
+            self.inject_features_with_hold, tea_cls_hold, tea_reg_hold,
+            stu_cls_hold, stu_reg_hold
+        )
+
 
         outputs = unpack_gt_instances(batch_data_samples)
         (batch_gt_instances, batch_gt_instances_ignore,
          batch_img_metas) = outputs
         losses = self.loss_by_feat(tea_cls_scores, tea_bbox_preds, tea_x,
                                    stu_cls_scores, stu_bbox_preds, stu_x,
-                                   reused_cls_scores, reused_bbox_preds,
+                                   injected_cls_scores, injected_bbox_preds,
                                    batch_gt_instances, batch_img_metas,
                                    batch_gt_instances_ignore)
         return losses
@@ -66,7 +72,33 @@ class CrossKDRetinaNet(CrossKDSingleStageDetector):
         cls_score = module.bbox_head.retina_cls(cls_feat)
         bbox_pred = module.bbox_head.retina_reg(reg_feat)
         return cls_score, bbox_pred, cls_feat_hold, reg_feat_hold
+    
+    def inject_features_with_hold(self, tea_cls_feat, tea_reg_feat, stu_cls_feat,
+                                  stu_reg_feat):
+        """Inject student features into teacher's head using hold logic."""
+        reused_cls_feat = self.align_scale(stu_cls_feat, tea_cls_feat)
+        reused_reg_feat = self.align_scale(stu_reg_feat, tea_reg_feat)
+        
+        if self.reused_teacher_head_idx != 0:
+            reused_cls_feat = F.relu(reused_cls_feat)
+            reused_reg_feat = F.relu(reused_reg_feat)
 
+        module = self.teacher.bbox_head
+        for i in range(self.reused_teacher_head_idx, module.stacked_convs):
+            reused_cls_feat = module.cls_convs[i](reused_cls_feat)
+            reused_reg_feat = module.reg_convs[i](reused_reg_feat)
+            reused_cls_feat_o = self.align_scale(stu_cls_feat, reused_cls_feat)
+            reused_reg_feat_o = self.align_scale(stu_reg_feat, reused_reg_feat)
+            reused_cls_feat_add = reused_cls_feat + reused_cls_feat_o
+            reused_reg_feat_add = reused_reg_feat + reused_reg_feat_o
+            reused_cls_feat = self.align_scale(reused_cls_feat_add, reused_cls_feat)
+            reused_reg_feat = self.align_scale(reused_reg_feat_add, reused_reg_feat)
+
+
+        injected_cls_score = module.retina_cls(reused_cls_feat)
+        injected_bbox_pred = module.retina_reg(reused_reg_feat)
+        return injected_cls_score, injected_bbox_pred
+    
     def reuse_teacher_head(self, tea_cls_feat, tea_reg_feat, stu_cls_feat,
                            stu_reg_feat):
         reused_cls_feat = self.align_scale(stu_cls_feat, tea_cls_feat)

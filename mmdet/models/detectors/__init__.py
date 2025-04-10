@@ -58,6 +58,7 @@ from .yolox import YOLOX
 from .crosskd_single_stage import CrossKDSingleStageDetector
 from .crosskd_retinanet import CrossKDRetinaNet
 from .crosskd_gfl import CrossKDGFL
+from .crosskd_gfl_add import CrossKDGFL_ADD
 from .crosskd_atss import CrossKDATSS
 from .crosskd_fcos import CrossKDFCOS
 
@@ -72,6 +73,6 @@ __all__ = [
     'TwoStagePanopticSegmentor', 'PanopticFPN', 'QueryInst', 'LAD', 'TOOD',
     'MaskFormer', 'DDOD', 'Mask2Former', 'SemiBaseDetector', 'SoftTeacher',
     'RTMDet', 'Detectron2Wrapper', 'CrowdDet', 'CondInst', 'BoxInst',
-    'DetectionTransformer', 'ConditionalDETR', 'DINO', 'DABDETR', 'CrossKDGFL',
+    'DetectionTransformer', 'ConditionalDETR', 'DINO', 'DABDETR', 'CrossKDGFL','CrossKDGFL_ADD',
     'CrossKDSingleStageDetector', 'CrossKDRetinaNet', 'CrossKDATSS', 'CrossKDFCOS'
 ]
